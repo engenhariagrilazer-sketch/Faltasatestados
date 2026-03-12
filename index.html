@@ -21,6 +21,7 @@
     }
 
     * { box-sizing: border-box; }
+
     body {
       margin: 0;
       font-family: Arial, Helvetica, sans-serif;
@@ -40,6 +41,7 @@
       align-items: center;
       margin-bottom: 18px;
       gap: 12px;
+      flex-wrap: wrap;
     }
 
     .brand h1 {
@@ -119,7 +121,10 @@
       box-shadow: 0 0 0 3px rgba(198,40,40,0.12);
     }
 
-    textarea { min-height: 110px; resize: vertical; }
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
 
     .btn {
       border: 0;
@@ -187,25 +192,42 @@
       margin-bottom: 6px;
     }
 
-    .menu-btn span { color: var(--muted); font-size: 14px; }
+    .menu-btn span {
+      color: var(--muted);
+      font-size: 14px;
+    }
 
     .kpis .card { padding: 18px; }
-    .kpi-value { font-size: 28px; font-weight: 700; margin-top: 8px; }
+
+    .kpi-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+
     .muted { color: var(--muted); }
 
     .table-wrap { overflow: auto; }
+
     table {
       width: 100%;
       border-collapse: collapse;
       font-size: 14px;
     }
+
     th, td {
       text-align: left;
       padding: 12px;
       border-bottom: 1px solid var(--border);
       vertical-align: top;
     }
-    th { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+
+    th {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
 
     .badge {
       display: inline-block;
@@ -214,11 +236,17 @@
       font-size: 12px;
       font-weight: 700;
     }
+
     .pendente { background: #fff4db; color: var(--warn); }
     .aprovado { background: #e9f9ef; color: var(--ok); }
     .recusado { background: #fdecec; color: var(--bad); }
 
-    .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
     .hidden { display: none !important; }
 
     .footer-note {
@@ -262,6 +290,7 @@
         <h1>Controle de Faltas e Atrasos</h1>
         <p>Protótipo HTML integrado ao Firebase Firestore</p>
       </div>
+
       <div class="top-actions">
         <button class="btn btn-secondary" onclick="showScreen('loginScreen')">Login</button>
         <button class="btn btn-secondary" onclick="showScreen('homeScreen')">Menu</button>
@@ -294,6 +323,7 @@
             </select>
           </div>
         </div>
+
         <div style="margin-top:16px" class="inline">
           <button class="btn btn-primary" onclick="login()">Entrar</button>
           <span id="userInfo" class="muted"></span>
@@ -304,19 +334,19 @@
     <section id="homeScreen" class="screen">
       <div class="grid grid-4 kpis" style="margin-bottom:18px;">
         <div class="card">
-          <div class="muted">Total local</div>
+          <div class="muted">Total Firebase</div>
           <div class="kpi-value" id="kpiTotal">0</div>
         </div>
         <div class="card">
-          <div class="muted">Pendentes locais</div>
+          <div class="muted">Pendentes</div>
           <div class="kpi-value" id="kpiPendente">0</div>
         </div>
         <div class="card">
-          <div class="muted">Aprovados locais</div>
+          <div class="muted">Aprovados</div>
           <div class="kpi-value" id="kpiAprovado">0</div>
         </div>
         <div class="card">
-          <div class="muted">Recusados locais</div>
+          <div class="muted">Recusados</div>
           <div class="kpi-value" id="kpiRecusado">0</div>
         </div>
       </div>
@@ -421,7 +451,7 @@
           <div>
             <label>Observação desta fase</label>
             <div class="card muted" style="padding:14px; box-shadow:none; line-height:1.5;">
-              Nesta etapa o sistema salva apenas os dados descritivos da ocorrência no Firestore. Login oficial e anexos podem ser adicionados depois.
+              Nesta etapa o sistema salva e lê os dados descritivos diretamente do Firestore. Login oficial, anexos e aprovações no banco podem ser adicionados depois.
             </div>
           </div>
         </div>
@@ -430,7 +460,9 @@
           <button class="btn btn-primary" onclick="saveOccurrence()">Enviar justificativa</button>
           <button class="btn btn-secondary" onclick="showScreen('homeScreen')">Voltar</button>
         </div>
-        <div class="footer-note">Para funcionar, abra este arquivo em um servidor local e não apenas com duplo clique, pois o Firebase usa módulo JavaScript.</div>
+        <div class="footer-note">
+          Abra este arquivo por servidor local, como Live Server no VS Code ou http://localhost, para evitar problemas com módulos do Firebase.
+        </div>
       </div>
     </section>
 
@@ -483,7 +515,7 @@
       </div>
 
       <div class="card">
-        <h2>Painel RH (visual local)</h2>
+        <h2>Painel RH</h2>
         <div class="table-wrap">
           <table>
             <thead>
@@ -494,7 +526,6 @@
                 <th>Data</th>
                 <th>Motivo</th>
                 <th>Status</th>
-                <th>Ações locais</th>
               </tr>
             </thead>
             <tbody id="adminTable"></tbody>
@@ -510,7 +541,10 @@
       getFirestore,
       collection,
       addDoc,
-      serverTimestamp
+      serverTimestamp,
+      getDocs,
+      query,
+      where
     } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -525,18 +559,26 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    const screens = ['loginScreen', 'homeScreen', 'formScreen', 'historyScreen', 'adminScreen'];
-    const STORAGE_KEY = 'faltas_atrasos_registros_v2';
-    const USER_KEY = 'faltas_atrasos_usuario_v2';
+    const screens = ["loginScreen", "homeScreen", "formScreen", "historyScreen", "adminScreen"];
+    const USER_KEY = "faltas_atrasos_usuario_v3";
 
     window.showScreen = function(id) {
-      screens.forEach(screen => document.getElementById(screen).classList.remove('active'));
-      document.getElementById(id).classList.add('active');
+      screens.forEach(screen => document.getElementById(screen).classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+
+      if (id === "historyScreen") {
+        renderHistory();
+      }
+
+      if (id === "adminScreen") {
+        renderAdmin();
+      }
+
       updateKPIs();
-    }
+    };
 
     function getUser() {
-      return JSON.parse(localStorage.getItem(USER_KEY) || 'null');
+      return JSON.parse(localStorage.getItem(USER_KEY) || "null");
     }
 
     function setUser(user) {
@@ -545,90 +587,111 @@
     }
 
     window.login = function() {
-      const nome = document.getElementById('nome').value.trim();
-      const matricula = document.getElementById('matricula').value.trim();
-      const setor = document.getElementById('setor').value;
+      const nome = document.getElementById("nome").value.trim();
+      const matricula = document.getElementById("matricula").value.trim();
+      const setor = document.getElementById("setor").value;
+
       if (!nome || !matricula || !setor) {
-        alert('Preencha nome, matrícula e setor para continuar.');
+        alert("Preencha nome, matrícula e setor para continuar.");
         return;
       }
+
       setUser({ nome, matricula, setor });
-      showScreen('homeScreen');
-    }
+      showScreen("homeScreen");
+    };
 
     function renderUserInfo() {
       const user = getUser();
-      const userInfo = document.getElementById('userInfo');
+      const userInfo = document.getElementById("userInfo");
+
       if (!user) {
-        userInfo.textContent = 'Nenhum colaborador logado';
+        userInfo.textContent = "Nenhum colaborador logado";
         return;
       }
+
       userInfo.textContent = `${user.nome} | Matrícula ${user.matricula} | ${user.setor}`;
-      document.getElementById('nome').value = user.nome;
-      document.getElementById('matricula').value = user.matricula;
-      document.getElementById('setor').value = user.setor;
-    }
-
-    function getRecords() {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-    }
-
-    function setRecords(data) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      updateKPIs();
+      document.getElementById("nome").value = user.nome;
+      document.getElementById("matricula").value = user.matricula;
+      document.getElementById("setor").value = user.setor;
     }
 
     window.openForm = function(tipo) {
       const user = getUser();
+
       if (!user) {
-        alert('Faça o login do colaborador primeiro.');
-        showScreen('loginScreen');
+        alert("Faça o login do colaborador primeiro.");
+        showScreen("loginScreen");
         return;
       }
-      document.getElementById('f_nome').value = user.nome;
-      document.getElementById('f_matricula').value = user.matricula;
-      document.getElementById('f_setor').value = user.setor;
-      document.getElementById('f_tipo').value = tipo;
-      document.getElementById('f_data').valueAsDate = new Date();
-      document.getElementById('f_previsto').value = '';
-      document.getElementById('f_real').value = '';
-      document.getElementById('f_motivo').value = 'Transporte';
-      document.getElementById('f_descricao').value = '';
-      document.getElementById('f_confirmacao').checked = false;
-      document.getElementById('formTitle').textContent = `Nova ocorrência: ${tipo}`;
-      document.getElementById('successBox').style.display = 'none';
-      document.getElementById('errorBox').style.display = 'none';
-      document.getElementById('errorBox').textContent = '';
+
+      document.getElementById("f_nome").value = user.nome;
+      document.getElementById("f_matricula").value = user.matricula;
+      document.getElementById("f_setor").value = user.setor;
+      document.getElementById("f_tipo").value = tipo;
+      document.getElementById("f_data").valueAsDate = new Date();
+      document.getElementById("f_previsto").value = "";
+      document.getElementById("f_real").value = "";
+      document.getElementById("f_motivo").value = "Transporte";
+      document.getElementById("f_descricao").value = "";
+      document.getElementById("f_confirmacao").checked = false;
+      document.getElementById("formTitle").textContent = `Nova ocorrência: ${tipo}`;
+      document.getElementById("successBox").style.display = "none";
+      document.getElementById("errorBox").style.display = "none";
+      document.getElementById("errorBox").textContent = "";
       toggleHorarioReal();
-      showScreen('formScreen');
-    }
+      showScreen("formScreen");
+    };
 
     window.toggleHorarioReal = function() {
-      const tipo = document.getElementById('f_tipo').value;
-      const box = document.getElementById('horarioRealBox');
-      box.classList.toggle('hidden', tipo !== 'Atraso');
-    }
+      const tipo = document.getElementById("f_tipo").value;
+      const box = document.getElementById("horarioRealBox");
+      box.classList.toggle("hidden", tipo !== "Atraso");
+    };
 
     async function salvarOcorrenciaFirebase(dados) {
-      const docRef = await addDoc(collection(db, 'ocorrencias'), {
+      const docRef = await addDoc(collection(db, "ocorrencias"), {
         ...dados,
-        status: 'pendente',
-        origemRegistro: 'app',
+        status: "pendente",
+        origemRegistro: "app",
         criadoEm: serverTimestamp()
       });
       return docRef.id;
     }
 
+    async function carregarOcorrenciasDoFirebase() {
+      const snapshot = await getDocs(collection(db, "ocorrencias"));
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    }
+
+    async function carregarMinhasOcorrencias() {
+      const user = getUser();
+      if (!user) return [];
+
+      const q = query(
+        collection(db, "ocorrencias"),
+        where("matricula", "==", user.matricula)
+      );
+
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    }
+
     window.saveOccurrence = async function() {
       const user = getUser();
       if (!user) {
-        alert('Faça login antes de registrar uma justificativa.');
+        alert("Faça login antes de registrar uma justificativa.");
         return;
       }
 
-      const confirmacao = document.getElementById('f_confirmacao').checked;
+      const confirmacao = document.getElementById("f_confirmacao").checked;
       if (!confirmacao) {
-        alert('É necessário confirmar a veracidade das informações.');
+        alert("É necessário confirmar a veracidade das informações.");
         return;
       }
 
@@ -636,129 +699,129 @@
         nomeFuncionario: user.nome,
         matricula: user.matricula,
         setor: user.setor,
-        tipoOcorrencia: document.getElementById('f_tipo').value,
-        dataOcorrencia: document.getElementById('f_data').value,
-        horarioPrevisto: document.getElementById('f_previsto').value,
-        horarioReal: document.getElementById('f_real').value,
-        motivo: document.getElementById('f_motivo').value,
-        descricao: document.getElementById('f_descricao').value,
+        tipoOcorrencia: document.getElementById("f_tipo").value,
+        dataOcorrencia: document.getElementById("f_data").value,
+        horarioPrevisto: document.getElementById("f_previsto").value,
+        horarioReal: document.getElementById("f_real").value,
+        motivo: document.getElementById("f_motivo").value,
+        descricao: document.getElementById("f_descricao").value,
         aceiteDigital: true
       };
 
       try {
-        const idFirebase = await salvarOcorrenciaFirebase(dados);
-
-        const localRecord = {
-          id: idFirebase,
-          nome: dados.nomeFuncionario,
-          matricula: dados.matricula,
-          setor: dados.setor,
-          tipo: dados.tipoOcorrencia,
-          dataOcorrencia: dados.dataOcorrencia,
-          horarioPrevisto: dados.horarioPrevisto,
-          horarioReal: dados.horarioReal,
-          motivo: dados.motivo,
-          descricao: dados.descricao,
-          status: 'Pendente'
-        };
-
-        const data = getRecords();
-        data.unshift(localRecord);
-        setRecords(data);
-        renderHistory();
-        renderAdmin();
-        document.getElementById('errorBox').style.display = 'none';
-        document.getElementById('successBox').style.display = 'block';
-        setTimeout(() => showScreen('historyScreen'), 700);
+        await salvarOcorrenciaFirebase(dados);
+        document.getElementById("errorBox").style.display = "none";
+        document.getElementById("successBox").style.display = "block";
+        await updateKPIs();
+        setTimeout(() => showScreen("historyScreen"), 700);
       } catch (error) {
-        console.error('Erro ao salvar no Firebase:', error);
-        const box = document.getElementById('errorBox');
-        box.style.display = 'block';
-        box.textContent = 'Erro ao salvar no Firebase. Verifique se o Firestore está criado, se as regras estão em modo de teste e se o arquivo está sendo aberto por um servidor local.';
+        console.error("Erro ao salvar no Firebase:", error);
+        const box = document.getElementById("errorBox");
+        box.style.display = "block";
+        box.textContent = "Erro ao salvar no Firebase. Verifique se o Firestore está ativo, se as regras estão em modo de teste e se o arquivo está sendo aberto por um servidor local.";
+      }
+    };
+
+    window.renderHistory = async function() {
+      const tbody = document.getElementById("historyTable");
+      tbody.innerHTML = '<tr><td colspan="5" class="muted">Carregando...</td></tr>';
+
+      try {
+        const rows = await carregarMinhasOcorrencias();
+
+        tbody.innerHTML = rows.length ? rows.map(r => `
+          <tr>
+            <td>${formatDate(r.dataOcorrencia)}</td>
+            <td>${escapeHtml(r.tipoOcorrencia || "-")}</td>
+            <td>${escapeHtml(r.motivo || "-")}</td>
+            <td><span class="badge ${normalizeStatusClass(r.status)}">${capitalize(r.status || "pendente")}</span></td>
+            <td>${escapeHtml(r.descricao || "-")}</td>
+          </tr>
+        `).join("") : '<tr><td colspan="5" class="muted">Nenhuma justificativa registrada.</td></tr>';
+      } catch (error) {
+        console.error(error);
+        tbody.innerHTML = '<tr><td colspan="5" class="muted">Erro ao carregar dados do Firebase.</td></tr>';
+      }
+    };
+
+    window.renderAdmin = async function() {
+      const nome = document.getElementById("filtroNome")?.value?.toLowerCase() || "";
+      const setor = document.getElementById("filtroSetor")?.value || "";
+      const status = document.getElementById("filtroStatus")?.value?.toLowerCase() || "";
+      const tbody = document.getElementById("adminTable");
+
+      tbody.innerHTML = '<tr><td colspan="6" class="muted">Carregando...</td></tr>';
+
+      try {
+        let rows = await carregarOcorrenciasDoFirebase();
+
+        if (nome) {
+          rows = rows.filter(r => (r.nomeFuncionario || "").toLowerCase().includes(nome));
+        }
+
+        if (setor) {
+          rows = rows.filter(r => (r.setor || "") === setor);
+        }
+
+        if (status) {
+          rows = rows.filter(r => (r.status || "").toLowerCase() === status);
+        }
+
+        tbody.innerHTML = rows.length ? rows.map(r => `
+          <tr>
+            <td><strong>${escapeHtml(r.nomeFuncionario || "-")}</strong><br><span class="muted">Mat. ${escapeHtml(r.matricula || "-")}</span></td>
+            <td>${escapeHtml(r.setor || "-")}</td>
+            <td>${escapeHtml(r.tipoOcorrencia || "-")}</td>
+            <td>${formatDate(r.dataOcorrencia)}</td>
+            <td>${escapeHtml(r.motivo || "-")}</td>
+            <td><span class="badge ${normalizeStatusClass(r.status)}">${capitalize(r.status || "pendente")}</span></td>
+          </tr>
+        `).join("") : '<tr><td colspan="6" class="muted">Nenhum registro encontrado.</td></tr>';
+      } catch (error) {
+        console.error(error);
+        tbody.innerHTML = '<tr><td colspan="6" class="muted">Erro ao carregar dados do Firebase.</td></tr>';
+      }
+    };
+
+    async function updateKPIs() {
+      try {
+        const data = await carregarOcorrenciasDoFirebase();
+        document.getElementById("kpiTotal").textContent = data.length;
+        document.getElementById("kpiPendente").textContent = data.filter(r => (r.status || "").toLowerCase() === "pendente").length;
+        document.getElementById("kpiAprovado").textContent = data.filter(r => (r.status || "").toLowerCase() === "aprovado").length;
+        document.getElementById("kpiRecusado").textContent = data.filter(r => (r.status || "").toLowerCase() === "recusado").length;
+      } catch (error) {
+        console.error("Erro ao atualizar KPIs:", error);
       }
     }
 
-    function badgeClass(status) {
-      return status.toLowerCase();
+    function normalizeStatusClass(status) {
+      const s = (status || "pendente").toLowerCase();
+      if (s === "aprovado") return "aprovado";
+      if (s === "recusado") return "recusado";
+      return "pendente";
     }
 
-    window.renderHistory = function() {
-      const user = getUser();
-      const tbody = document.getElementById('historyTable');
-      const rows = getRecords().filter(r => !user || r.matricula === user.matricula);
-      tbody.innerHTML = rows.length ? rows.map(r => `
-        <tr>
-          <td>${formatDate(r.dataOcorrencia)}</td>
-          <td>${r.tipo}</td>
-          <td>${r.motivo}</td>
-          <td><span class="badge ${badgeClass(r.status)}">${r.status}</span></td>
-          <td>${escapeHtml(r.descricao || '-')}</td>
-        </tr>
-      `).join('') : '<tr><td colspan="5" class="muted">Nenhuma justificativa registrada.</td></tr>';
-    }
-
-    window.renderAdmin = function() {
-      const nome = document.getElementById('filtroNome')?.value?.toLowerCase() || '';
-      const setor = document.getElementById('filtroSetor')?.value || '';
-      const status = document.getElementById('filtroStatus')?.value || '';
-      const tbody = document.getElementById('adminTable');
-
-      let rows = getRecords();
-      if (nome) rows = rows.filter(r => r.nome.toLowerCase().includes(nome));
-      if (setor) rows = rows.filter(r => r.setor === setor);
-      if (status) rows = rows.filter(r => r.status === status);
-
-      tbody.innerHTML = rows.length ? rows.map(r => `
-        <tr>
-          <td><strong>${escapeHtml(r.nome)}</strong><br><span class="muted">Mat. ${escapeHtml(r.matricula)}</span></td>
-          <td>${escapeHtml(r.setor)}</td>
-          <td>${escapeHtml(r.tipo)}</td>
-          <td>${formatDate(r.dataOcorrencia)}</td>
-          <td>${escapeHtml(r.motivo)}</td>
-          <td><span class="badge ${badgeClass(r.status)}">${r.status}</span></td>
-          <td>
-            <div class="row-actions">
-              <button class="btn btn-success" onclick="updateStatus('${r.id}', 'Aprovado')">Aprovar</button>
-              <button class="btn btn-danger" onclick="updateStatus('${r.id}', 'Recusado')">Recusar</button>
-            </div>
-          </td>
-        </tr>
-      `).join('') : '<tr><td colspan="7" class="muted">Nenhum registro encontrado.</td></tr>';
-    }
-
-    window.updateStatus = function(id, status) {
-      const data = getRecords().map(r => r.id === id ? { ...r, status } : r);
-      setRecords(data);
-      renderAdmin();
-      renderHistory();
-    }
-
-    function updateKPIs() {
-      const data = getRecords();
-      document.getElementById('kpiTotal').textContent = data.length;
-      document.getElementById('kpiPendente').textContent = data.filter(r => r.status === 'Pendente').length;
-      document.getElementById('kpiAprovado').textContent = data.filter(r => r.status === 'Aprovado').length;
-      document.getElementById('kpiRecusado').textContent = data.filter(r => r.status === 'Recusado').length;
+    function capitalize(text) {
+      return text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
     }
 
     function formatDate(dateStr) {
-      if (!dateStr) return '-';
-      const [y, m, d] = dateStr.split('-');
+      if (!dateStr) return "-";
+      const [y, m, d] = dateStr.split("-");
       return d && m && y ? `${d}/${m}/${y}` : dateStr;
     }
 
     function escapeHtml(text) {
       return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
     renderUserInfo();
-    renderHistory();
-    renderAdmin();
     updateKPIs();
   </script>
 </body>
