@@ -62,6 +62,7 @@
       display: none;
       animation: fade .2s ease;
     }
+
     .screen.active { display: block; }
 
     @keyframes fade {
@@ -94,11 +95,6 @@
     h2 {
       margin: 0 0 16px;
       font-size: 22px;
-    }
-
-    h3 {
-      margin: 0 0 12px;
-      font-size: 18px;
     }
 
     label {
@@ -223,7 +219,6 @@
     .recusado { background: #fdecec; color: var(--bad); }
 
     .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-
     .hidden { display: none !important; }
 
     .footer-note {
@@ -248,6 +243,16 @@
       margin-bottom: 14px;
       display: none;
     }
+
+    .error-box {
+      background: #fdecec;
+      color: #b42318;
+      border: 1px solid #f3c3c3;
+      padding: 12px 14px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -255,7 +260,7 @@
     <div class="header">
       <div class="brand">
         <h1>Controle de Faltas e Atrasos</h1>
-        <p>Protótipo em HTML para análise interna</p>
+        <p>Protótipo HTML integrado ao Firebase Firestore</p>
       </div>
       <div class="top-actions">
         <button class="btn btn-secondary" onclick="showScreen('loginScreen')">Login</button>
@@ -299,19 +304,19 @@
     <section id="homeScreen" class="screen">
       <div class="grid grid-4 kpis" style="margin-bottom:18px;">
         <div class="card">
-          <div class="muted">Total de registros</div>
+          <div class="muted">Total local</div>
           <div class="kpi-value" id="kpiTotal">0</div>
         </div>
         <div class="card">
-          <div class="muted">Pendentes</div>
+          <div class="muted">Pendentes locais</div>
           <div class="kpi-value" id="kpiPendente">0</div>
         </div>
         <div class="card">
-          <div class="muted">Aprovados</div>
+          <div class="muted">Aprovados locais</div>
           <div class="kpi-value" id="kpiAprovado">0</div>
         </div>
         <div class="card">
-          <div class="muted">Recusados</div>
+          <div class="muted">Recusados locais</div>
           <div class="kpi-value" id="kpiRecusado">0</div>
         </div>
       </div>
@@ -329,7 +334,7 @@
           </button>
           <button class="menu-btn" onclick="openForm('Atestado')">
             <strong>Enviar atestado</strong>
-            <span>Anexar documento e descrição complementar.</span>
+            <span>Nesta fase será salvo apenas o texto descritivo.</span>
           </button>
           <button class="menu-btn" onclick="openForm('Saída antecipada')">
             <strong>Registrar saída antecipada</strong>
@@ -342,7 +347,9 @@
     <section id="formScreen" class="screen">
       <div class="card">
         <h2 id="formTitle">Nova ocorrência</h2>
-        <div id="successBox" class="success-box">Justificativa registrada com sucesso.</div>
+        <div id="successBox" class="success-box">Justificativa registrada com sucesso no Firebase.</div>
+        <div id="errorBox" class="error-box"></div>
+
         <div class="grid grid-3">
           <div>
             <label>Nome do funcionário</label>
@@ -378,7 +385,7 @@
           </div>
         </div>
 
-        <div class="grid grid-3" style="margin-top:14px;">
+        <div class="grid grid-2" style="margin-top:14px;">
           <div id="horarioRealBox">
             <label for="f_real">Horário real</label>
             <input id="f_real" type="time" />
@@ -394,10 +401,6 @@
               <option>Outro</option>
             </select>
           </div>
-          <div>
-            <label for="f_documento">Documento / atestado</label>
-            <input id="f_documento" type="file" accept="image/*,.pdf" />
-          </div>
         </div>
 
         <div style="margin-top:14px;">
@@ -407,10 +410,6 @@
 
         <div class="grid grid-2" style="margin-top:14px;">
           <div>
-            <label for="f_selfie">Selfie / validação facial</label>
-            <input id="f_selfie" type="file" accept="image/*" capture="user" />
-          </div>
-          <div>
             <label>Confirmação</label>
             <div class="card" style="padding:14px; box-shadow:none;">
               <label style="display:flex; gap:10px; align-items:flex-start; font-weight:400; margin:0;">
@@ -419,13 +418,19 @@
               </label>
             </div>
           </div>
+          <div>
+            <label>Observação desta fase</label>
+            <div class="card muted" style="padding:14px; box-shadow:none; line-height:1.5;">
+              Nesta etapa o sistema salva apenas os dados descritivos da ocorrência no Firestore. Login oficial e anexos podem ser adicionados depois.
+            </div>
+          </div>
         </div>
 
         <div style="margin-top:18px" class="inline">
           <button class="btn btn-primary" onclick="saveOccurrence()">Enviar justificativa</button>
           <button class="btn btn-secondary" onclick="showScreen('homeScreen')">Voltar</button>
         </div>
-        <div class="footer-note">Este protótipo salva os dados localmente no navegador para fins de análise visual e funcional.</div>
+        <div class="footer-note">Para funcionar, abra este arquivo em um servidor local e não apenas com duplo clique, pois o Firebase usa módulo JavaScript.</div>
       </div>
     </section>
 
@@ -478,7 +483,7 @@
       </div>
 
       <div class="card">
-        <h2>Painel RH / Liderança</h2>
+        <h2>Painel RH (visual local)</h2>
         <div class="table-wrap">
           <table>
             <thead>
@@ -489,7 +494,7 @@
                 <th>Data</th>
                 <th>Motivo</th>
                 <th>Status</th>
-                <th>Ações</th>
+                <th>Ações locais</th>
               </tr>
             </thead>
             <tbody id="adminTable"></tbody>
@@ -499,12 +504,32 @@
     </section>
   </div>
 
-  <script>
-    const screens = ['loginScreen', 'homeScreen', 'formScreen', 'historyScreen', 'adminScreen'];
-    const STORAGE_KEY = 'faltas_atrasos_registros_v1';
-    const USER_KEY = 'faltas_atrasos_usuario_v1';
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+    import {
+      getFirestore,
+      collection,
+      addDoc,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-    function showScreen(id) {
+    const firebaseConfig = {
+      apiKey: "AIzaSyCAQ5ufQwNtykUb_uwJ0lvMTTHvOzL7uzk",
+      authDomain: "faltasatestados-5e7cc.firebaseapp.com",
+      projectId: "faltasatestados-5e7cc",
+      storageBucket: "faltasatestados-5e7cc.firebasestorage.app",
+      messagingSenderId: "373777579040",
+      appId: "1:373777579040:web:3466f792987e7f1b9d9045"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const screens = ['loginScreen', 'homeScreen', 'formScreen', 'historyScreen', 'adminScreen'];
+    const STORAGE_KEY = 'faltas_atrasos_registros_v2';
+    const USER_KEY = 'faltas_atrasos_usuario_v2';
+
+    window.showScreen = function(id) {
       screens.forEach(screen => document.getElementById(screen).classList.remove('active'));
       document.getElementById(id).classList.add('active');
       updateKPIs();
@@ -519,7 +544,7 @@
       renderUserInfo();
     }
 
-    function login() {
+    window.login = function() {
       const nome = document.getElementById('nome').value.trim();
       const matricula = document.getElementById('matricula').value.trim();
       const setor = document.getElementById('setor').value;
@@ -553,7 +578,7 @@
       updateKPIs();
     }
 
-    function openForm(tipo) {
+    window.openForm = function(tipo) {
       const user = getUser();
       if (!user) {
         alert('Faça o login do colaborador primeiro.');
@@ -569,27 +594,32 @@
       document.getElementById('f_real').value = '';
       document.getElementById('f_motivo').value = 'Transporte';
       document.getElementById('f_descricao').value = '';
-      document.getElementById('f_documento').value = '';
-      document.getElementById('f_selfie').value = '';
       document.getElementById('f_confirmacao').checked = false;
       document.getElementById('formTitle').textContent = `Nova ocorrência: ${tipo}`;
       document.getElementById('successBox').style.display = 'none';
+      document.getElementById('errorBox').style.display = 'none';
+      document.getElementById('errorBox').textContent = '';
       toggleHorarioReal();
       showScreen('formScreen');
     }
 
-    function toggleHorarioReal() {
+    window.toggleHorarioReal = function() {
       const tipo = document.getElementById('f_tipo').value;
       const box = document.getElementById('horarioRealBox');
       box.classList.toggle('hidden', tipo !== 'Atraso');
     }
 
-    function fileName(inputId) {
-      const input = document.getElementById(inputId);
-      return input.files && input.files[0] ? input.files[0].name : '';
+    async function salvarOcorrenciaFirebase(dados) {
+      const docRef = await addDoc(collection(db, 'ocorrencias'), {
+        ...dados,
+        status: 'pendente',
+        origemRegistro: 'app',
+        criadoEm: serverTimestamp()
+      });
+      return docRef.id;
     }
 
-    function saveOccurrence() {
+    window.saveOccurrence = async function() {
       const user = getUser();
       if (!user) {
         alert('Faça login antes de registrar uma justificativa.');
@@ -602,38 +632,57 @@
         return;
       }
 
-      const record = {
-        id: 'OC-' + Date.now(),
-        dataRegistro: new Date().toLocaleString('pt-BR'),
-        nome: user.nome,
+      const dados = {
+        nomeFuncionario: user.nome,
         matricula: user.matricula,
         setor: user.setor,
-        tipo: document.getElementById('f_tipo').value,
+        tipoOcorrencia: document.getElementById('f_tipo').value,
         dataOcorrencia: document.getElementById('f_data').value,
         horarioPrevisto: document.getElementById('f_previsto').value,
         horarioReal: document.getElementById('f_real').value,
         motivo: document.getElementById('f_motivo').value,
         descricao: document.getElementById('f_descricao').value,
-        documento: fileName('f_documento'),
-        selfie: fileName('f_selfie'),
-        status: 'Pendente',
-        observacaoRH: ''
+        aceiteDigital: true
       };
 
-      const data = getRecords();
-      data.unshift(record);
-      setRecords(data);
-      document.getElementById('successBox').style.display = 'block';
-      renderHistory();
-      renderAdmin();
-      setTimeout(() => showScreen('historyScreen'), 500);
+      try {
+        const idFirebase = await salvarOcorrenciaFirebase(dados);
+
+        const localRecord = {
+          id: idFirebase,
+          nome: dados.nomeFuncionario,
+          matricula: dados.matricula,
+          setor: dados.setor,
+          tipo: dados.tipoOcorrencia,
+          dataOcorrencia: dados.dataOcorrencia,
+          horarioPrevisto: dados.horarioPrevisto,
+          horarioReal: dados.horarioReal,
+          motivo: dados.motivo,
+          descricao: dados.descricao,
+          status: 'Pendente'
+        };
+
+        const data = getRecords();
+        data.unshift(localRecord);
+        setRecords(data);
+        renderHistory();
+        renderAdmin();
+        document.getElementById('errorBox').style.display = 'none';
+        document.getElementById('successBox').style.display = 'block';
+        setTimeout(() => showScreen('historyScreen'), 700);
+      } catch (error) {
+        console.error('Erro ao salvar no Firebase:', error);
+        const box = document.getElementById('errorBox');
+        box.style.display = 'block';
+        box.textContent = 'Erro ao salvar no Firebase. Verifique se o Firestore está criado, se as regras estão em modo de teste e se o arquivo está sendo aberto por um servidor local.';
+      }
     }
 
     function badgeClass(status) {
       return status.toLowerCase();
     }
 
-    function renderHistory() {
+    window.renderHistory = function() {
       const user = getUser();
       const tbody = document.getElementById('historyTable');
       const rows = getRecords().filter(r => !user || r.matricula === user.matricula);
@@ -648,7 +697,7 @@
       `).join('') : '<tr><td colspan="5" class="muted">Nenhuma justificativa registrada.</td></tr>';
     }
 
-    function renderAdmin() {
+    window.renderAdmin = function() {
       const nome = document.getElementById('filtroNome')?.value?.toLowerCase() || '';
       const setor = document.getElementById('filtroSetor')?.value || '';
       const status = document.getElementById('filtroStatus')?.value || '';
@@ -677,7 +726,7 @@
       `).join('') : '<tr><td colspan="7" class="muted">Nenhum registro encontrado.</td></tr>';
     }
 
-    function updateStatus(id, status) {
+    window.updateStatus = function(id, status) {
       const data = getRecords().map(r => r.id === id ? { ...r, status } : r);
       setRecords(data);
       renderAdmin();
