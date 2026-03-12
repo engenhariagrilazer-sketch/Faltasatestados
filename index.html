@@ -547,7 +547,8 @@
       query,
       where,
       doc,
-      updateDoc
+      updateDoc,
+      getDoc
     } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -563,7 +564,7 @@
     const db = getFirestore(app);
 
     const screens = ["loginScreen", "homeScreen", "formScreen", "historyScreen", "adminScreen"];
-    const USER_KEY = "faltas_atrasos_usuario_v4";
+    const USER_KEY = "faltas_atrasos_usuario_v5";
 
     window.showScreen = function(id) {
       screens.forEach(screen => document.getElementById(screen).classList.remove("active"));
@@ -722,6 +723,19 @@
 
     async function alterarStatusOcorrencia(id, novoStatus) {
       const ref = doc(db, "ocorrencias", id);
+      const snap = await getDoc(ref);
+
+      if (!snap.exists()) {
+        throw new Error("Ocorrência não encontrada.");
+      }
+
+      const dadosAtuais = snap.data();
+      const statusAtual = (dadosAtuais.status || "pendente").toLowerCase();
+
+      if (statusAtual !== "pendente") {
+        throw new Error("Esta ocorrência já foi concluída.");
+      }
+
       await updateDoc(ref, {
         status: novoStatus.toLowerCase(),
         atualizadoEm: serverTimestamp()
@@ -737,7 +751,7 @@
         alert("Ocorrência aprovada com sucesso.");
       } catch (error) {
         console.error("Erro ao aprovar:", error);
-        alert("Erro ao aprovar ocorrência.");
+        alert(error.message || "Erro ao aprovar ocorrência.");
       }
     };
 
@@ -750,7 +764,7 @@
         alert("Ocorrência recusada com sucesso.");
       } catch (error) {
         console.error("Erro ao recusar:", error);
-        alert("Erro ao recusar ocorrência.");
+        alert(error.message || "Erro ao recusar ocorrência.");
       }
     };
 
@@ -791,22 +805,31 @@
         if (setor) rows = rows.filter(r => (r.setor || "") === setor);
         if (status) rows = rows.filter(r => (r.status || "").toLowerCase() === status);
 
-        tbody.innerHTML = rows.length ? rows.map(r => `
-          <tr>
-            <td><strong>${escapeHtml(r.nomeFuncionario || "-")}</strong><br><span class="muted">Mat. ${escapeHtml(r.matricula || "-")}</span></td>
-            <td>${escapeHtml(r.setor || "-")}</td>
-            <td>${escapeHtml(r.tipoOcorrencia || "-")}</td>
-            <td>${formatDate(r.dataOcorrencia)}</td>
-            <td>${escapeHtml(r.motivo || "-")}</td>
-            <td><span class="badge ${normalizeStatusClass(r.status)}">${capitalize(r.status || "pendente")}</span></td>
-            <td>
+        tbody.innerHTML = rows.length ? rows.map(r => {
+          const statusAtual = (r.status || "pendente").toLowerCase();
+
+          let acoesHtml = `<span class="muted">Concluído</span>`;
+          if (statusAtual === "pendente") {
+            acoesHtml = `
               <div class="row-actions">
                 <button class="btn btn-success" onclick="aprovarOcorrencia('${r.id}')">Aprovar</button>
                 <button class="btn btn-danger" onclick="recusarOcorrencia('${r.id}')">Recusar</button>
               </div>
-            </td>
-          </tr>
-        `).join("") : '<tr><td colspan="7" class="muted">Nenhum registro encontrado.</td></tr>';
+            `;
+          }
+
+          return `
+            <tr>
+              <td><strong>${escapeHtml(r.nomeFuncionario || "-")}</strong><br><span class="muted">Mat. ${escapeHtml(r.matricula || "-")}</span></td>
+              <td>${escapeHtml(r.setor || "-")}</td>
+              <td>${escapeHtml(r.tipoOcorrencia || "-")}</td>
+              <td>${formatDate(r.dataOcorrencia)}</td>
+              <td>${escapeHtml(r.motivo || "-")}</td>
+              <td><span class="badge ${normalizeStatusClass(r.status)}">${capitalize(r.status || "pendente")}</span></td>
+              <td>${acoesHtml}</td>
+            </tr>
+          `;
+        }).join("") : '<tr><td colspan="7" class="muted">Nenhum registro encontrado.</td></tr>';
       } catch (error) {
         console.error(error);
         tbody.innerHTML = '<tr><td colspan="7" class="muted">Erro ao carregar dados do Firebase.</td></tr>';
