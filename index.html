@@ -451,7 +451,7 @@
           <div>
             <label>Observação desta fase</label>
             <div class="card muted" style="padding:14px; box-shadow:none; line-height:1.5;">
-              Nesta etapa o sistema salva e lê os dados descritivos diretamente do Firestore. Login oficial, anexos e aprovações no banco podem ser adicionados depois.
+              Nesta etapa o sistema salva e lê os dados descritivos diretamente do Firestore. Login oficial, anexos e aprovações mais completas podem ser adicionados depois.
             </div>
           </div>
         </div>
@@ -461,7 +461,7 @@
           <button class="btn btn-secondary" onclick="showScreen('homeScreen')">Voltar</button>
         </div>
         <div class="footer-note">
-          Abra este arquivo por servidor local, como Live Server no VS Code ou http://localhost, para evitar problemas com módulos do Firebase.
+          Abra este arquivo por servidor local, como Live Server no VS Code ou localhost, para evitar problemas com módulos do Firebase.
         </div>
       </div>
     </section>
@@ -526,6 +526,7 @@
                 <th>Data</th>
                 <th>Motivo</th>
                 <th>Status</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody id="adminTable"></tbody>
@@ -544,7 +545,9 @@
       serverTimestamp,
       getDocs,
       query,
-      where
+      where,
+      doc,
+      updateDoc
     } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -560,19 +563,14 @@
     const db = getFirestore(app);
 
     const screens = ["loginScreen", "homeScreen", "formScreen", "historyScreen", "adminScreen"];
-    const USER_KEY = "faltas_atrasos_usuario_v3";
+    const USER_KEY = "faltas_atrasos_usuario_v4";
 
     window.showScreen = function(id) {
       screens.forEach(screen => document.getElementById(screen).classList.remove("active"));
       document.getElementById(id).classList.add("active");
 
-      if (id === "historyScreen") {
-        renderHistory();
-      }
-
-      if (id === "adminScreen") {
-        renderAdmin();
-      }
+      if (id === "historyScreen") renderHistory();
+      if (id === "adminScreen") renderAdmin();
 
       updateKPIs();
     };
@@ -660,9 +658,9 @@
 
     async function carregarOcorrenciasDoFirebase() {
       const snapshot = await getDocs(collection(db, "ocorrencias"));
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      return snapshot.docs.map(item => ({
+        id: item.id,
+        ...item.data()
       }));
     }
 
@@ -676,9 +674,9 @@
       );
 
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
+      return snapshot.docs.map(item => ({
+        id: item.id,
+        ...item.data()
       }));
     }
 
@@ -722,6 +720,40 @@
       }
     };
 
+    async function alterarStatusOcorrencia(id, novoStatus) {
+      const ref = doc(db, "ocorrencias", id);
+      await updateDoc(ref, {
+        status: novoStatus.toLowerCase(),
+        atualizadoEm: serverTimestamp()
+      });
+    }
+
+    window.aprovarOcorrencia = async function(id) {
+      try {
+        await alterarStatusOcorrencia(id, "aprovado");
+        await renderAdmin();
+        await renderHistory();
+        await updateKPIs();
+        alert("Ocorrência aprovada com sucesso.");
+      } catch (error) {
+        console.error("Erro ao aprovar:", error);
+        alert("Erro ao aprovar ocorrência.");
+      }
+    };
+
+    window.recusarOcorrencia = async function(id) {
+      try {
+        await alterarStatusOcorrencia(id, "recusado");
+        await renderAdmin();
+        await renderHistory();
+        await updateKPIs();
+        alert("Ocorrência recusada com sucesso.");
+      } catch (error) {
+        console.error("Erro ao recusar:", error);
+        alert("Erro ao recusar ocorrência.");
+      }
+    };
+
     window.renderHistory = async function() {
       const tbody = document.getElementById("historyTable");
       tbody.innerHTML = '<tr><td colspan="5" class="muted">Carregando...</td></tr>';
@@ -750,22 +782,14 @@
       const status = document.getElementById("filtroStatus")?.value?.toLowerCase() || "";
       const tbody = document.getElementById("adminTable");
 
-      tbody.innerHTML = '<tr><td colspan="6" class="muted">Carregando...</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" class="muted">Carregando...</td></tr>';
 
       try {
         let rows = await carregarOcorrenciasDoFirebase();
 
-        if (nome) {
-          rows = rows.filter(r => (r.nomeFuncionario || "").toLowerCase().includes(nome));
-        }
-
-        if (setor) {
-          rows = rows.filter(r => (r.setor || "") === setor);
-        }
-
-        if (status) {
-          rows = rows.filter(r => (r.status || "").toLowerCase() === status);
-        }
+        if (nome) rows = rows.filter(r => (r.nomeFuncionario || "").toLowerCase().includes(nome));
+        if (setor) rows = rows.filter(r => (r.setor || "") === setor);
+        if (status) rows = rows.filter(r => (r.status || "").toLowerCase() === status);
 
         tbody.innerHTML = rows.length ? rows.map(r => `
           <tr>
@@ -775,11 +799,17 @@
             <td>${formatDate(r.dataOcorrencia)}</td>
             <td>${escapeHtml(r.motivo || "-")}</td>
             <td><span class="badge ${normalizeStatusClass(r.status)}">${capitalize(r.status || "pendente")}</span></td>
+            <td>
+              <div class="row-actions">
+                <button class="btn btn-success" onclick="aprovarOcorrencia('${r.id}')">Aprovar</button>
+                <button class="btn btn-danger" onclick="recusarOcorrencia('${r.id}')">Recusar</button>
+              </div>
+            </td>
           </tr>
-        `).join("") : '<tr><td colspan="6" class="muted">Nenhum registro encontrado.</td></tr>';
+        `).join("") : '<tr><td colspan="7" class="muted">Nenhum registro encontrado.</td></tr>';
       } catch (error) {
         console.error(error);
-        tbody.innerHTML = '<tr><td colspan="6" class="muted">Erro ao carregar dados do Firebase.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="muted">Erro ao carregar dados do Firebase.</td></tr>';
       }
     };
 
